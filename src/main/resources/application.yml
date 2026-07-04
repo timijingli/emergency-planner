@@ -1,0 +1,28 @@
+# ========== 服务器配置 ==========
+server:
+  port: ${PORT:8080}
+  tomcat:
+    relaxed-query-chars: '|'
+
+# ========== DeepSeek API 配置 ==========
+deepseek:
+  api-key: ${DEEPSEEK_API_KEY:你的DeepSeek-Key}
+
+# ========== 高德地图 API 配置 ==========
+# 高德开放平台：https://console.amap.com
+# Web服务 Key（后端用，不要暴露给前端）
+amap:
+  api-key: ${AMAP_API_KEY:你的高德Web服务Key}
+  # JS API Key（前端用，需在高德控制台添加白名单 localhost:8080）
+  js-api-key: ${AMAP_JS_API_KEY:你的高德JS-Key}
+
+# ========== 和风天气 API 配置 ==========
+# 和风天气控制台：https://console.qweather.com
+qweather:
+  api-key: ${QWEATHER_API_KEY:你的和风天气Key}
+
+# ========== 日志级别 ==========
+logging:
+  level:
+    com.emergency: DEBUG
+    org.springframework: WARN

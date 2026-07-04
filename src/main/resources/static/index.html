@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚨 个性化应急预案生成器 v2.0</title>
+    <style>
+        :root {
+            --bg: #f0f2f5;
+            --card-bg: #ffffff;
+            --primary: #e63946;
+            --primary-hover: #c1121f;
+            --text: #1d1d1f;
+            --text-secondary: #6e6e73;
+            --border: #d2d2d7;
+            --shadow: 0 2px 12px rgba(0,0,0,0.08);
+            --radius: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                         "Microsoft YaHei", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        /* ==================== 头部 ==================== */
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #fff;
+            padding: 16px 0 14px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        .header h1 { font-size: 1.6rem; font-weight: 700; }
+        .header .subtitle { font-size: 0.85rem; color: #aab; margin-top: 4px; }
+
+        /* ==================== 地图容器 ==================== */
+        .map-section {
+            position: relative;
+            height: 420px;
+            margin: 0;
+            border-bottom: 3px solid var(--primary);
+        }
+        #amap-container { width: 100%; height: 100%; }
+
+        /* 地图上的搜索框 */
+        .map-search-box {
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            gap: 6px;
+            background: #fff;
+            padding: 6px;
+            border-radius: 24px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+            width: 90%;
+            max-width: 500px;
+        }
+        .map-search-box input {
+            flex: 1;
+            border: none;
+            outline: none;
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            background: transparent;
+        }
+        .map-search-box button {
+            padding: 8px 18px;
+            border: none;
+            border-radius: 20px;
+            background: var(--primary);
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+        .map-search-box button:hover { background: var(--primary-hover); }
+
+        /* 地图上的定位信息条 */
+        .map-location-bar {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(26,26,46,0.9);
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            pointer-events: none;
+            max-width: 90%;
+            text-align: center;
+        }
+
+        /* 图例 */
+        .map-legend {
+            position: absolute;
+            bottom: 60px;
+            right: 12px;
+            z-index: 1000;
+            background: #fff;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 0.75rem;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+
+        /* ==================== 天气信息条 ==================== */
+        .weather-bar {
+            background: #1a1a2e;
+            color: #fff;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            font-size: 0.9rem;
+        }
+        .weather-bar .w-item { display: flex; align-items: center; gap: 4px; }
+        .weather-bar .warn-tag {
+            background: #ff9800;
+            color: #fff;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            animation: blink 1.5s ease-in-out infinite;
+        }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+        /* ==================== 主容器 ==================== */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px 16px 60px;
+        }
+
+        /* ==================== 卡片 ==================== */
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 24px 26px;
+            margin-bottom: 20px;
+        }
+        .card-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ==================== 表单 ==================== */
+        label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; color: var(--text); }
+        .hint { font-size: 0.78rem; color: var(--text-secondary); font-weight: 400; }
+        textarea {
+            width: 100%; padding: 10px 12px;
+            border: 1.5px solid var(--border); border-radius: 8px;
+            font-size: 0.92rem; font-family: inherit; resize: vertical;
+            transition: border-color 0.2s; background: #fafafa;
+            min-height: 70px;
+        }
+        textarea:focus { outline: none; border-color: var(--primary); background: #fff;
+            box-shadow: 0 0 0 3px rgba(230,57,70,0.1); }
+        .form-group { margin-bottom: 16px; }
+
+        /* 预设标签 */
+        .preset-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+        .preset-tag {
+            font-size: 0.8rem; padding: 5px 12px; border-radius: 18px;
+            border: 1px solid var(--border); background: #fff;
+            cursor: pointer; transition: all 0.2s; color: var(--text-secondary);
+        }
+        .preset-tag:hover { border-color: var(--primary); color: var(--primary); background: #fff5f5; }
+
+        /* 位置确认区 */
+        .location-confirm {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            padding: 10px 14px; background: #f0f7ff; border-radius: 8px;
+            font-size: 0.88rem; margin-bottom: 12px;
+        }
+        .location-confirm .loc-icon { font-size: 1.3rem; }
+        .location-confirm .loc-text { flex: 1; color: #333; }
+        .location-confirm .loc-city { color: var(--text-secondary); font-size: 0.8rem; }
+
+        /* ==================== 按钮 ==================== */
+        .btn-generate {
+            width: 100%; padding: 14px 0; font-size: 1.1rem; font-weight: 700;
+            letter-spacing: 1px; border: none; border-radius: 10px;
+            cursor: pointer; color: #fff; background: var(--primary);
+            transition: all 0.25s; box-shadow: 0 4px 12px rgba(230,57,70,0.3);
+        }
+        .btn-generate:hover:not(:disabled) {
+            background: var(--primary-hover); transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(230,57,70,0.4);
+        }
+        .btn-generate:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; }
+
+        /* ==================== 加载 ==================== */
+        .loading-area { display: none; text-align: center; padding: 32px 0; }
+        .loading-area.active { display: block; }
+        .spinner {
+            width: 44px; height: 44px;
+            border: 4px solid #e0e0e0; border-top-color: var(--primary);
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+            margin: 0 auto 14px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { font-size: 0.92rem; color: var(--text-secondary); }
+
+        /* ==================== 预案结果 ==================== */
+        .plan-result { display: none; }
+        .plan-result.active { display: block; }
+
+        .plan-header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            flex-wrap: wrap; gap: 10px; margin-bottom: 18px;
+            padding-bottom: 16px; border-bottom: 2px solid #f0f0f0;
+        }
+        .plan-title { font-size: 1.3rem; font-weight: 700; color: #1a1a2e; }
+
+        .risk-badge {
+            display: inline-block; padding: 5px 14px; border-radius: 20px;
+            font-size: 0.8rem; font-weight: 700; color: #fff;
+        }
+        .risk-高 { background: #d32f2f; }
+        .risk-中 { background: #f57c00; }
+        .risk-低 { background: #388e3c; }
+
+        .overview-box {
+            background: #fff3cd; border-left: 4px solid #ffc107;
+            padding: 12px 14px; border-radius: 6px; margin-bottom: 22px; font-weight: 500;
+        }
+
+        .section-title {
+            font-size: 1.02rem; font-weight: 700; margin: 22px 0 10px;
+            display: flex; align-items: center; gap: 6px;
+        }
+
+        /* 第一时间行动 */
+        .first-action-list { list-style: none; }
+        .first-action-item {
+            display: flex; gap: 12px; padding: 12px 14px;
+            background: #fff5f5; border-radius: 8px; margin-bottom: 8px;
+            border: 1px solid #fecaca;
+        }
+        .step-num {
+            flex-shrink: 0; width: 30px; height: 30px;
+            background: var(--primary); color: #fff; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.85rem;
+        }
+        .action-content { flex: 1; }
+        .action-title { font-weight: 600; }
+        .action-reason { font-size: 0.83rem; color: var(--text-secondary); margin-top: 2px; }
+
+        /* 分阶段 */
+        .phase-block { margin-bottom: 18px; }
+        .phase-name {
+            font-weight: 700; font-size: 0.95rem; color: #0f3460;
+            margin-bottom: 8px; padding: 8px 14px; background: #e8f0fe; border-radius: 6px;
+        }
+        .step-item {
+            display: flex; gap: 10px; padding: 8px 0 8px 14px;
+            border-left: 3px solid #e0e0e0; margin-left: 6px; margin-bottom: 4px;
+        }
+        .step-dot {
+            flex-shrink: 0; width: 26px; height: 26px; background: #0f3460;
+            color: #fff; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; font-weight: 700; font-size: 0.78rem;
+        }
+        .step-attention {
+            display: inline-block; font-size: 0.8rem; color: #d32f2f;
+            margin-top: 4px; padding: 2px 8px; background: #fff5f5; border-radius: 4px;
+        }
+
+        /* 禁止事项 */
+        .dont-do-list { list-style: none; }
+        .dont-do-item {
+            padding: 9px 14px; margin-bottom: 6px;
+            background: #fff5f5; border: 1px solid #fecaca;
+            border-radius: 6px; color: #c1121f; font-weight: 500;
+        }
+        .dont-do-item::before { content: "✕ "; font-weight: 700; }
+
+        .after-rescue-box {
+            background: #e8f5e9; border-left: 4px solid #4caf50;
+            padding: 12px 14px; border-radius: 6px;
+        }
+
+        .contact-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+        .contact-tag {
+            padding: 7px 14px; border-radius: 18px;
+            background: #1a1a2e; color: #fff; font-size: 0.85rem; font-weight: 500;
+        }
+        .contact-tag .contact-num { font-weight: 700; color: #ff6b6b; margin-left: 4px; }
+
+        /* 设施卡片 */
+        .facility-cards { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+        .facility-card {
+            padding: 10px 14px; border-radius: 8px;
+            border: 1px solid var(--border); font-size: 0.85rem;
+            display: flex; align-items: center; gap: 8px; background: #fafafa;
+        }
+        .facility-card .f-icon { font-size: 1.2rem; }
+        .facility-card .f-dist { color: var(--primary); font-weight: 700; }
+
+        /* ==================== 错误 ==================== */
+        .error-box {
+            display: none; padding: 12px 14px; background: #fff5f5;
+            border: 1px solid #fecaca; border-radius: 8px; color: #c1121f; margin-top: 14px;
+        }
+        .error-box.active { display: block; }
+
+        /* ==================== 结果地图 ==================== */
+        .result-map-section { height: 300px; margin: 16px 0; border-radius: 8px; overflow: hidden; }
+        #result-map-container { width: 100%; height: 100%; }
+
+        /* ==================== 响应式 ==================== */
+        @media (max-width: 768px) {
+            .header h1 { font-size: 1.3rem; }
+            .map-section { height: 300px; }
+            .card { padding: 16px 14px; }
+            .weather-bar { font-size: 0.78rem; gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ==================== 头部 ==================== -->
+    <header class="header">
+        <h1>🚨 个性化应急预案生成器 v2.0</h1>
+        <p class="subtitle">AI × 实时地图 × 天气 — 精准到时间地点的应急行动指南</p>
+    </header>
+
+    <!-- ==================== 地图区域 ==================== -->
+    <div class="map-section">
+        <div id="amap-container"></div>
+        <!-- 搜索框 -->
+        <div class="map-search-box">
+            <input type="text" id="mapSearchInput" placeholder="🔍 搜索事发地点（如：北京大学宿舍楼）" />
+            <button onclick="searchPlace()">搜索</button>
+        </div>
+        <!-- 图例 -->
+        <div class="map-legend">
+            <div class="legend-item"><span class="legend-dot" style="background:#e63946"></span> 你选的位置</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#4caf50"></span> 避难所</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#2196f3"></span> 医院</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#ff9800"></span> 消防/派出所</div>
+        </div>
+        <!-- 当前选中位置 -->
+        <div class="map-location-bar" id="mapLocationBar">📍 点击地图选择事发位置</div>
+    </div>
+
+    <!-- ==================== 天气信息条 ==================== -->
+    <div class="weather-bar" id="weatherBar">
+        <span class="w-item">☁️ 加载天气中…</span>
+    </div>
+
+    <!-- ==================== 主容器 ==================== -->
+    <div class="container">
+
+        <!-- 输入卡片 -->
+        <div class="card">
+            <div class="card-title">📝 描述紧急场景</div>
+
+            <!-- 位置确认 -->
+            <div class="location-confirm" id="locationConfirm">
+                <span class="loc-icon">📍</span>
+                <span class="loc-text">请在地图上点击或搜索事发位置</span>
+                <span class="loc-city" id="locCity"></span>
+            </div>
+
+            <!-- 场景输入 -->
+            <div class="form-group">
+                <label for="scenario">场景描述 <span style="color:#e63946;">*</span></label>
+                <textarea id="scenario"
+                    placeholder="例如：大学宿舍楼3楼，凌晨2点突发火灾，楼道有浓烟，能见度极低"
+                    rows="3"></textarea>
+            </div>
+
+            <!-- 快速填充 -->
+            <div class="preset-tags">
+                <span class="preset-tag" data-scenario="大学宿舍楼3楼，凌晨2点突发火灾，楼道有浓烟，能见度极低">🔥 宿舍火灾</span>
+                <span class="preset-tag" data-scenario="7级地震发生，我在12层办公楼内，大楼剧烈摇晃，玻璃碎裂，电力中断">🏢 地震(高层)</span>
+                <span class="preset-tag" data-scenario="城市遭遇特大暴雨，地下室开始进水，水位上升速度很快，电力可能中断">🌊 城市内涝</span>
+                <span class="preset-tag" data-scenario="野外徒步时迷路，手机信号弱电量仅剩15%，天色渐暗，气温在下降">🥾 野外迷路</span>
+                <span class="preset-tag" data-scenario="发现有人突然倒地失去意识，无呼吸无心跳，周围无AED设备，救护车预计15分钟后到达">🫀 心脏骤停</span>
+            </div>
+
+            <!-- 附加信息 -->
+            <div class="form-group">
+                <label for="extraInfo">现场附加信息 <span class="hint">（可选）</span></label>
+                <textarea id="extraInfo"
+                    placeholder="例如：室内有2人，行动方便、手机在身边有信号、卧室门已关闭"
+                    rows="2"></textarea>
+            </div>
+
+            <!-- 生成按钮 -->
+            <button class="btn-generate" id="btnGenerate" onclick="generatePlan()">
+                ⚡ 生成应急预案
+            </button>
+            <div class="error-box" id="errorBox"></div>
+        </div>
+
+        <!-- 加载动画 -->
+        <div class="loading-area" id="loadingArea">
+            <div class="spinner"></div>
+            <p class="loading-text">AI 正在综合分析场景、位置、天气、周边设施…</p>
+        </div>
+
+        <!-- ==================== 预案结果 ==================== -->
+        <div class="plan-result" id="planResult">
+            <div class="card">
+                <div class="plan-header">
+                    <h2 class="plan-title" id="planTitle"></h2>
+                    <span class="risk-badge" id="riskBadge"></span>
+                </div>
+
+                <div class="overview-box" id="planOverview"></div>
+
+                <!-- 周边设施摘要 -->
+                <h3 class="section-title">🗺️ 周边安全设施</h3>
+                <div class="facility-cards" id="facilityCards"></div>
+
+                <!-- 结果地图 -->
+                <h3 class="section-title">📍 安全设施分布</h3>
+                <div class="result-map-section">
+                    <div id="result-map-container"></div>
+                </div>
+
+                <!-- 第一时间行动 -->
+                <h3 class="section-title">⚡ 第一时间行动（前30秒最关键）</h3>
+                <ul class="first-action-list" id="firstActions"></ul>
+
+                <!-- 分阶段步骤 -->
+                <h3 class="section-title">📋 分阶段行动指南</h3>
+                <div id="phasesArea"></div>
+
+                <!-- 禁止事项 -->
+                <h3 class="section-title">🚫 千万不要做！</h3>
+                <ul class="dont-do-list" id="dontDoList"></ul>
+
+                <!-- 事后处理 -->
+                <h3 class="section-title">🩹 事后处理</h3>
+                <div class="after-rescue-box" id="afterRescue"></div>
+
+                <!-- 紧急联系电话 -->
+                <h3 class="section-title">📞 紧急联系电话</h3>
+                <div class="contact-tags" id="contactsArea"></div>
+            </div>
+        </div>
+
+        <p style="text-align:center; color:var(--text-secondary); font-size:0.8rem; padding-top:20px;">
+            ⚠️ 本工具生成的预案仅供参考和学习，真实紧急情况请以现场情况和专业人士指导为准
+        </p>
+    </div>
+
+    <!-- ==================== 高德地图 JS API（动态加载） ==================== -->
+    <script>
+        // ========== 全局状态 ==========
+        let amapKey = '';
+        let mainMap = null;      // 顶部地图实例
+        let resultMap = null;    // 结果地图实例
+        let selectedLng = null;
+        let selectedLat = null;
+        let selectedAddress = '';
+        let selectedCity = '';
+        let currentMarker = null;         // 用户选点标记
+        let facilityMarkers = [];         // 设施标记（主地图）
+        let resultMarkers = [];           // 设施标记（结果地图）
+        let facilitiesData = [];          // 周边设施数据
+        let weatherData = null;
+
+        // ========== 初始化：先获取配置，再加载地图 ==========
+        async function init() {
+            try {
+                const resp = await fetch('/api/config');
+                const cfg = await resp.json();
+                amapKey = cfg.amapJsApiKey;
+                if (!amapKey) {
+                    console.warn('未配置高德JS API Key，地图功能不可用');
+                    return;
+                }
+                // 动态加载高德 JS API 2.0
+                loadAmapScript();
+            } catch (e) {
+                console.error('获取配置失败', e);
+            }
+        }
+
+        function loadAmapScript() {
+            // 使用稳定的高德 JS API 1.4.15（兼容性好，直接加载即可用）
+            const script = document.createElement('script');
+            script.src = `https://webapi.amap.com/maps?v=1.4.15&key=${amapKey}&plugin=AMap.Geocoder,AMap.PlaceSearch,AMap.Geolocation`;
+            script.onload = () => {
+                // 1.4.x 版本加载后 window.AMap 直接可用
+                initMap(window.AMap);
+            };
+            script.onerror = () => {
+                console.error('高德地图脚本加载失败，请检查JS API Key是否有效');
+                document.getElementById('mapLocationBar').textContent = '⚠️ 地图加载失败，请检查API Key';
+            };
+            document.head.appendChild(script);
+        }
+
+        async function initMap(AMap) {
+            // ========== 主地图 ==========
+            mainMap = new AMap.Map('amap-container', {
+                zoom: 15,
+                center: [116.397428, 39.90923], // 默认天安门
+                resizeEnable: true
+            });
+
+            // 点击地图选点
+            mainMap.on('click', function(e) {
+                updateSelectedLocation(e.lnglat.getLng(), e.lnglat.getLat());
+            });
+
+            // 自动定位：1优先浏览器GPS → 2备用IP定位 → 3最终兜底
+        tryAutoLocate();
+
+        // ====== 辅助函数（在 initMap 内定义，可访问 AMap 和 mainMap） ======
+
+        function tryAutoLocate() {
+            // 方法1：HTML5 浏览器精确定位（GPS/WiFi）
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(pos) {
+                        const lng = pos.coords.longitude;
+                        const lat = pos.coords.latitude;
+                        mainMap.setCenter([lng, lat]);
+                        mainMap.setZoom(16);
+                        updateSelectedLocation(lng, lat);
+                    },
+                    function() { locateByIP(); },
+                    { timeout: 8000, enableHighAccuracy: true }
+                );
+            } else { locateByIP(); }
+        }
+
+        async function locateByIP() {
+            try {
+                const cityResp = await fetch('/api/map/city');
+                const cityData = await cityResp.json();
+                const geocoder = new AMap.Geocoder({ city: '全国' });
+                geocoder.getLocation(cityData.city, function(status, result) {
+                    if (status === 'complete' && result.geocodes.length > 0) {
+                        const loc = result.geocodes[0].location;
+                        mainMap.setCenter([loc.lng, loc.lat]);
+                        mainMap.setZoom(13);
+                        updateSelectedLocation(loc.lng, loc.lat);
+                        fetchWeather(cityData.city);
+                    }
+                });
+            } catch (e) {
+                console.warn('IP定位失败', e);
+                fetchWeather('北京');
+            }
+        }
+
+        // 搜索输入回车
+        document.getElementById('mapSearchInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') searchPlace();
+        });
+
+        // 预设标签点击
+        document.querySelectorAll('.preset-tag').forEach(tag => {
+            tag.addEventListener('click', function() {
+                document.getElementById('scenario').value = this.dataset.scenario;
+                document.getElementById('scenario').focus();
+            });
+        });
+
+        // Ctrl+Enter 提交
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') generatePlan();
+        });
+
+        // 把 AMap 存全局供搜索用
+        window._AMap = AMap;
+
+        } // ====== initMap 结束 ======
+
+        // ========== 搜索地点（走后端接口，不依赖 JS API Key 白名单） ==========
+        async function searchPlace() {
+            const keyword = document.getElementById('mapSearchInput').value.trim();
+            if (!keyword || !window._AMap) return;
+
+            try {
+                const resp = await fetch(`/api/map/geocode?address=${encodeURIComponent(keyword)}`);
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.error || `请求失败(${resp.status})`);
+                }
+                const geo = await resp.json();
+                if (geo.lng == null || geo.lat == null) {
+                    alert('未找到"' + keyword + '"，请尝试更详细的地址（如：XX市XX区XX路）');
+                    return;
+                }
+                mainMap.setCenter([geo.lng, geo.lat]);
+                mainMap.setZoom(15);
+                updateSelectedLocation(geo.lng, geo.lat);
+            } catch (e) {
+                alert('搜索失败：' + e.message + '\n\n请尝试更详细的地址（如：XX市XX区XX路）');
+            }
+        }
+
+        // ========== 更新选中位置 ==========
+        async function updateSelectedLocation(lng, lat) {
+            selectedLng = lng;
+            selectedLat = lat;
+
+            // 更新标记
+            const AMap = window._AMap;
+            if (currentMarker) { mainMap.remove(currentMarker); }
+            if (AMap) {
+                currentMarker = new AMap.Marker({
+                    position: [lng, lat],
+                    icon: new AMap.Icon({
+                        size: new AMap.Size(28, 38),
+                        image: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_r.png',
+                        imageSize: new AMap.Size(28, 38)
+                    })
+                });
+                mainMap.add(currentMarker);
+            }
+
+            // 逆地理编码获取地址
+            try {
+                const resp = await fetch(`/api/map/regeocode?lng=${lng}&lat=${lat}`);
+                const geo = await resp.json();
+                selectedAddress = geo.address || `${lng},${lat}`;
+                selectedCity = geo.city || '';
+
+                document.getElementById('mapLocationBar').textContent = '📍 ' + selectedAddress;
+                document.getElementById('locationConfirm').innerHTML =
+                    `<span class="loc-icon">✅</span>
+                     <span class="loc-text">${selectedAddress}</span>
+                     <span class="loc-city">${selectedCity}</span>`;
+
+                // 获取天气
+                if (selectedCity) {
+                    fetchWeather(selectedCity);
+                }
+            } catch (e) {
+                selectedAddress = `${lng},${lat}`;
+                document.getElementById('mapLocationBar').textContent = '📍 ' + selectedAddress;
+            }
+        }
+
+        // ========== 获取天气 ==========
+        async function fetchWeather(city) {
+            const bar = document.getElementById('weatherBar');
+            const cityName = city || '北京';
+            bar.innerHTML = `<span class="w-item">☁️ 正在获取${cityName}天气...</span>`;
+            try {
+                // 优先传坐标（推荐方式，无需城市搜索权限）
+                let url = `/api/weather/now?city=${encodeURIComponent(cityName)}`;
+                if (selectedLng != null && selectedLat != null) {
+                    url += `&lng=${selectedLng}&lat=${selectedLat}`;
+                }
+
+                const resp = await fetch(url);
+                const data = await resp.json();
+
+                if (data.error) {
+                    bar.innerHTML = `<span class="w-item">⚠️ ${data.error}</span>`;
+                    return;
+                }
+                if (!data.weather) {
+                    bar.innerHTML = `<span class="w-item">⚠️ 天气数据为空，请检查和风天气API Key是否有效</span>`;
+                    return;
+                }
+
+                weatherData = data;
+                renderWeatherBar(weatherData);
+            } catch (e) {
+                bar.innerHTML = `<span class="w-item">⚠️ 天气接口请求失败：${e.message}</span>`;
+            }
+        }
+
+        function renderWeatherBar(w) {
+            let html = '';
+            html += `<span class="w-item">🌤 ${w.weather || '未知'}</span>`;
+            html += `<span class="w-item">🌡 ${w.temperature || '-'}（体感${w.feelsLike || '-'}）</span>`;
+            html += `<span class="w-item">💨 ${w.windDirection || '-'} ${w.windScale || '-'}</span>`;
+            html += `<span class="w-item">💧 湿度${w.humidity || '-'}</span>`;
+            html += `<span class="w-item">👁 能见度${w.visibility || '-'}</span>`;
+            if (w.warnings && w.warnings.length > 0) {
+                w.warnings.forEach(warn => {
+                    html += `<span class="warn-tag">⚠ ${warn.level}${warn.type}预警</span>`;
+                });
+                // 弹窗提醒
+                const firstWarn = w.warnings[0];
+                setTimeout(() => {
+                    alert(`⚠️ ${firstWarn.level}${firstWarn.type}预警生效中！\n${firstWarn.title}\n\n${firstWarn.description}`);
+                }, 1500);
+            }
+            document.getElementById('weatherBar').innerHTML = html;
+        }
+
+        // ========== 生成预案 ==========
+        async function generatePlan() {
+            const scenario = document.getElementById('scenario').value.trim();
+            const extraInfo = document.getElementById('extraInfo').value.trim();
+
+            if (!scenario) {
+                showError('请先填写场景描述！');
+                return;
+            }
+
+            hideError();
+            hideResult();
+            showLoading();
+            const btn = document.getElementById('btnGenerate');
+            btn.disabled = true;
+            btn.textContent = '⏳ AI 综合分析中...';
+
+            try {
+                const resp = await fetch('/api/generate-plan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        scenario: scenario,
+                        extraInfo: extraInfo || null,
+                        address: selectedAddress,
+                        lng: selectedLng,
+                        lat: selectedLat,
+                        city: selectedCity
+                    })
+                });
+
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.error || `服务器错误(${resp.status})`);
+                }
+
+                const plan = await resp.json();
+                renderPlan(plan);
+                document.getElementById('planResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            } catch (e) {
+                showError('生成失败：' + e.message);
+            } finally {
+                hideLoading();
+                btn.disabled = false;
+                btn.textContent = '⚡ 生成应急预案';
+            }
+        }
+
+        // ========== 渲染预案 ==========
+        function renderPlan(plan) {
+            // 标题 & 风险等级
+            document.getElementById('planTitle').textContent = plan.title || '应急预案';
+            const badge = document.getElementById('riskBadge');
+            badge.textContent = '风险等级：' + (plan.riskLevel || '未知');
+            badge.className = 'risk-badge risk-' + (plan.riskLevel || '中');
+
+            // 概述
+            document.getElementById('planOverview').textContent = plan.overview || '';
+
+            // 第一时间行动
+            const faDiv = document.getElementById('firstActions');
+            faDiv.innerHTML = '';
+            if (plan.firstActions && plan.firstActions.length > 0) {
+                plan.firstActions.forEach(item => {
+                    faDiv.innerHTML += `<li class="first-action-item">
+                        <span class="step-num">${item.step}</span>
+                        <div class="action-content">
+                            <div class="action-title">${esc(item.action)}</div>
+                            <div class="action-reason">💡 ${esc(item.reason)}</div>
+                        </div></li>`;
+                });
+            } else { faDiv.innerHTML = '<li style="color:#999">暂无数据</li>'; }
+
+            // 分阶段
+            const phasesDiv = document.getElementById('phasesArea');
+            phasesDiv.innerHTML = '';
+            if (plan.steps && plan.steps.length > 0) {
+                plan.steps.forEach(phase => {
+                    let stepsHtml = '';
+                    if (phase.steps) phase.steps.forEach(s => {
+                        stepsHtml += `<div class="step-item">
+                            <span class="step-dot">${s.step}</span>
+                            <div>
+                                <div class="action-title">${esc(s.action)}</div>
+                                <div class="action-reason">💡 ${esc(s.reason)}</div>
+                                ${s.attention ? `<span class="step-attention">⚠️ ${esc(s.attention)}</span>` : ''}
+                            </div></div>`;
+                    });
+                    phasesDiv.innerHTML += `<div class="phase-block">
+                        <div class="phase-name">📌 ${esc(phase.phase)}</div>${stepsHtml}</div>`;
+                });
+            } else { phasesDiv.innerHTML = '<p style="color:#999">暂无数据</p>'; }
+
+            // 禁止事项
+            const ddDiv = document.getElementById('dontDoList');
+            ddDiv.innerHTML = '';
+            if (plan.dontDo && plan.dontDo.length > 0) {
+                plan.dontDo.forEach(item => {
+                    ddDiv.innerHTML += `<li class="dont-do-item">${esc(item)}</li>`;
+                });
+            } else { ddDiv.innerHTML = '<li style="color:#999">暂无数据</li>'; }
+
+            // 事后处理
+            document.getElementById('afterRescue').textContent = plan.afterRescue || '暂无数据';
+
+            // 紧急联系人
+            const contactsDiv = document.getElementById('contactsArea');
+            contactsDiv.innerHTML = '';
+            if (plan.emergencyContacts && plan.emergencyContacts.length > 0) {
+                plan.emergencyContacts.forEach(c => {
+                    contactsDiv.innerHTML +=
+                        `<span class="contact-tag">${esc(c.name)}：<span class="contact-num">${esc(c.number)}</span></span>`;
+                });
+            } else { contactsDiv.innerHTML = '<span style="color:#999">暂无数据</span>'; }
+
+            // ──── 周边设施 ────
+            fetchAndShowFacilities();
+            document.getElementById('planResult').classList.add('active');
+        }
+
+        // ========== 获取并展示周边设施 ==========
+        async function fetchAndShowFacilities() {
+            const cardsDiv = document.getElementById('facilityCards');
+            cardsDiv.innerHTML = '<span style="color:#999">搜索中...</span>';
+
+            if (!selectedLng || !selectedLat) {
+                cardsDiv.innerHTML = '<span style="color:#999">请先在地图上选择事发位置</span>';
+                return;
+            }
+
+            try {
+                const kws = encodeURIComponent('避难所|医院|消防站|派出所');
+                const resp = await fetch(
+                    `/api/map/nearby?lng=${selectedLng}&lat=${selectedLat}&keywords=${kws}&radius=3000`);
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                facilitiesData = await resp.json();
+
+                if (!facilitiesData || facilitiesData.length === 0) {
+                    cardsDiv.innerHTML = '<span style="color:#999">附近3公里内未检索到安全设施</span>';
+                } else {
+                    const typeIcons = { '避难所': '🏠', '医院': '🏥', '消防站': '🚒', '派出所': '👮' };
+                    cardsDiv.innerHTML = facilitiesData.slice(0, 8).map(f => {
+                        const icon = typeIcons[f.type] || '📍';
+                        return `<div class="facility-card">
+                            <span class="f-icon">${icon}</span>
+                            <span>${esc(f.name)}</span>
+                            <span class="f-dist">${esc(f.distance)}</span>
+                        </div>`;
+                    }).join('');
+                }
+
+                // 延迟绘制结果地图（等容器可见）
+                setTimeout(() => renderResultMap(), 400);
+            } catch (e) {
+                console.error('设施获取失败:', e);
+                cardsDiv.innerHTML = '<span style="color:#999">设施数据加载失败：' + esc(e.message) + '</span>';
+            }
+        }
+
+        // ========== 结果地图 ==========
+        function renderResultMap() {
+            if (!window._AMap || !selectedLng || !selectedLat) return;
+
+            const AMap = window._AMap;
+
+            // 延迟一点确保容器可见
+            setTimeout(() => {
+                if (resultMap) { resultMap.destroy(); }
+
+                resultMap = new AMap.Map('result-map-container', {
+                    zoom: 14,
+                    center: [selectedLng, selectedLat],
+                    resizeEnable: true
+                });
+
+                // 用户位置
+                new AMap.Marker({
+                    position: [selectedLng, selectedLat],
+                    icon: new AMap.Icon({
+                        size: new AMap.Size(28, 38),
+                        image: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_r.png',
+                        imageSize: new AMap.Size(28, 38)
+                    }),
+                    title: '事发位置'
+                }).setMap(resultMap);
+
+                // 周边设施
+                const colors = {
+                    '避难所': '#4caf50',
+                    '医院': '#2196f3',
+                    '消防站': '#ff9800',
+                    '派出所': '#ff9800',
+                    '安全出口': '#9c27b0'
+                };
+
+                facilitiesData.forEach(f => {
+                    const marker = new AMap.Marker({
+                        position: [f.lng, f.lat],
+                        title: `${f.name} (${f.distance})`,
+                        icon: new AMap.Icon({
+                            size: new AMap.Size(20, 28),
+                            image: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_b.png',
+                            imageSize: new AMap.Size(20, 28)
+                        }),
+                        label: {
+                            content: `<div style="font-size:11px;background:${colors[f.type]||'#999'};color:#fff;
+                                padding:1px 6px;border-radius:3px;white-space:nowrap;">${esc(f.name)}</div>`,
+                            direction: 'top'
+                        }
+                    });
+                    marker.setMap(resultMap);
+                });
+            }, 300);
+        }
+
+        // ========== 工具函数 ==========
+        function showLoading() { document.getElementById('loadingArea').classList.add('active'); }
+        function hideLoading() { document.getElementById('loadingArea').classList.remove('active'); }
+        function hideResult() { document.getElementById('planResult').classList.remove('active'); }
+
+        function showError(msg) {
+            const el = document.getElementById('errorBox');
+            el.textContent = '❌ ' + msg;
+            el.classList.add('active');
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        function hideError() { document.getElementById('errorBox').classList.remove('active'); }
+        function esc(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ========== 页面加载 ==========
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
